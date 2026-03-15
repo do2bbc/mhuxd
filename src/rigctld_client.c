@@ -64,6 +64,10 @@ struct rigctld_client {
 	char *rigctld_options;
 	pid_t child_pid;
 	ev_child child_watcher;
+	int child_log_fd;
+	ev_io child_log_w;
+	char child_log_buf[512];
+	size_t child_log_len;
 	char tx_buf[80];
 	size_t tx_len;
 	size_t tx_off;
@@ -82,6 +86,124 @@ static const char *radio_str(uint8_t radio) {
 	return radio == 2 ? "r2" : "r1";
 }
 
+static void rigcl_log_child_line(struct rigctld_client *client) {
+	client->child_log_buf[client->child_log_len] = '\0';
+	dbg0("%s rigctld[%s]: %s", client->serial, radio_str(client->radio), client->child_log_buf);
+	client->child_log_len = 0;
+}
+
+static void rigcl_feed_child_log(struct rigctld_client *client, const char *buf, size_t len) {
+	size_t i;
+
+	if(!client || !buf || !len)
+		return;
+
+	for(i = 0; i < len; i++) {
+		unsigned char ch = (unsigned char)buf[i];
+
+		if(ch == '\r')
+			continue;
+
+		if(ch == '\n') {
+			rigcl_log_child_line(client);
+			continue;
+		}
+
+		if(client->child_log_len + 1 >= sizeof(client->child_log_buf))
+			rigcl_log_child_line(client);
+
+		client->child_log_buf[client->child_log_len++] = (char)ch;
+	}
+}
+
+static void rigcl_drain_child_log(struct rigctld_client *client) {
+	char buf[256];
+
+	if(!client || client->child_log_fd < 0)
+		return;
+
+	while(1) {
+		ssize_t r = 0;
+		int errsv = 0;
+		enum mhuxd_io_rw_result io_res = io_read_nonblock(client->child_log_fd, buf, sizeof(buf), &r, &errsv);
+
+		if(io_res == MHUXD_IO_RW_PROGRESS) {
+			rigcl_feed_child_log(client, buf, (size_t)r);
+			continue;
+		}
+
+		if(io_res == MHUXD_IO_RW_ERROR)
+			dbg0("%s rigctld log read failed (%s) err=%d", client->serial, radio_str(client->radio), errsv);
+
+		break;
+	}
+}
+
+static void rigcl_close_child_log(struct rigctld_client *client, int flush_partial) {
+	if(!client)
+		return;
+
+	rigcl_drain_child_log(client);
+
+	if(client->child_log_fd != -1) {
+		ev_io_stop(client->loop, &client->child_log_w);
+		fd_close(&client->child_log_fd);
+	}
+
+	if(flush_partial && client->child_log_len > 0)
+		rigcl_log_child_line(client);
+	else if(!flush_partial)
+		client->child_log_len = 0;
+}
+
+static void rigcl_child_log_cb(struct ev_loop *loop, ev_io *w, int revents) {
+	(void)loop;
+	(void)revents;
+	struct rigctld_client *client = w->data;
+
+	if(!client)
+		return;
+
+	rigcl_drain_child_log(client);
+
+	if(client->child_pid == 0)
+		rigcl_close_child_log(client, 1);
+}
+
+static int rigcl_make_child_log_pipe(int *read_fd, int *write_fd) {
+	int pipefd[2] = { -1, -1 };
+	int flags;
+
+	if(!read_fd || !write_fd) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if(pipe(pipefd) != 0)
+		return -1;
+
+	flags = fcntl(pipefd[0], F_GETFL, 0);
+	if(flags < 0 || fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK) < 0)
+		goto fail;
+
+	flags = fcntl(pipefd[0], F_GETFD, 0);
+	if(flags < 0 || fcntl(pipefd[0], F_SETFD, flags | FD_CLOEXEC) < 0)
+		goto fail;
+
+	flags = fcntl(pipefd[1], F_GETFD, 0);
+	if(flags < 0 || fcntl(pipefd[1], F_SETFD, flags | FD_CLOEXEC) < 0)
+		goto fail;
+
+	*read_fd = pipefd[0];
+	*write_fd = pipefd[1];
+	return 0;
+
+fail:
+	fd_close(&pipefd[0]);
+	fd_close(&pipefd[1]);
+	return -1;
+}
+
 static void rigcl_child_cb(struct ev_loop *loop, ev_child *w, int revents) {
 	(void)revents;
 	struct rigctld_client *client = w->data;
@@ -89,9 +211,12 @@ static void rigcl_child_cb(struct ev_loop *loop, ev_child *w, int revents) {
 	dbg0("%s auto-started rigctld pid=%d exited status=%d",
 	     client->serial, w->rpid, w->rstatus);
 	client->child_pid = 0;
+	rigcl_close_child_log(client, 1);
 }
 
 static void rigcl_spawn_rigctld(struct rigctld_client *client) {
+	dbg0("%s rigctld spawn requested, auto-start: %d, child_pid: %d", client->serial, client->auto_start, client->child_pid);
+
 	if(!client->auto_start || client->child_pid > 0)
 		return;
 
@@ -100,6 +225,8 @@ static void rigcl_spawn_rigctld(struct rigctld_client *client) {
 
 	/* Tokenize options string into argv (simple whitespace split, no shell expansion) */
 	char *args_buf = NULL;
+	int child_log_rd = -1;
+	int child_log_wr = -1;
 	char *argv_ptrs[68]; /* "rigctld" + up to 64 opts + "-t" + port + NULL */
 	int argc = 0;
 	argv_ptrs[argc++] = "rigctld";
@@ -122,14 +249,32 @@ static void rigcl_spawn_rigctld(struct rigctld_client *client) {
 	     client->serial, client->port,
 	     client->rigctld_options ? client->rigctld_options : "");
 
+	if(rigcl_make_child_log_pipe(&child_log_rd, &child_log_wr) != 0) {
+		dbg0("%s rigctld auto-start pipe failed: err=%d", client->serial, errno);
+		free(args_buf);
+		return;
+	}
+
+	rigcl_close_child_log(client, 0);
+
 	pid_t mhuxd_pid = getpid();
 	pid_t pid = fork();
 	if(pid < 0) {
 		dbg0("%s rigctld auto-start fork failed: err=%d", client->serial, errno);
+		fd_close(&child_log_rd);
+		fd_close(&child_log_wr);
 		free(args_buf);
 		return;
 	}
 	if(pid == 0) {
+		fd_close(&child_log_rd);
+		if(dup2(child_log_wr, STDOUT_FILENO) < 0)
+			_exit(127);
+		if(dup2(child_log_wr, STDERR_FILENO) < 0)
+			_exit(127);
+		if(child_log_wr > STDERR_FILENO)
+			close(child_log_wr);
+
 		/* child: ask the kernel to send SIGKILL when the parent (mhuxd) dies,
 		 * regardless of how it dies (including SIGKILL).  This prevents rigctld
 		 * from outliving mhuxd and holding the VSP device open. */
@@ -142,8 +287,13 @@ static void rigcl_spawn_rigctld(struct rigctld_client *client) {
 		_exit(127);
 	}
 	/* parent */
+	fd_close(&child_log_wr);
 	free(args_buf);
 	client->child_pid = pid;
+	client->child_log_fd = child_log_rd;
+	client->child_log_len = 0;
+	ev_io_set(&client->child_log_w, client->child_log_fd, EV_READ);
+	ev_io_start(client->loop, &client->child_log_w);
 	ev_child_init(&client->child_watcher, rigcl_child_cb, pid, 0);
 	client->child_watcher.data = client;
 	ev_child_start(EV_DEFAULT_ &client->child_watcher);
@@ -546,7 +696,7 @@ static void rigcl_stop(struct rigctld_client *client) {
 }
 
 static void rigcl_start(struct rigctld_client *client) {
-    dbg1("%s for %s", __func__, client->serial);
+    dbg0("%s for %s, client->enabled %d, client->running %d", __func__, client->serial, client->enabled, client->running);
 
     if(!client->enabled)
 		return;
@@ -612,6 +762,7 @@ struct rigctld_client *rigctld_client_create(struct ev_loop *loop, struct mh_con
 	client->auto_start = cfg->auto_start ? 1 : 0;
 	client->rigctld_options = (cfg->rigctld_options && *cfg->rigctld_options) ? w_strdup(cfg->rigctld_options) : NULL;
 	client->child_pid = 0;
+	client->child_log_fd = -1;
 	client->fd = -1;
 	client->last_info.radio = client->radio;
 	client->last_info.mode = -1;
@@ -620,6 +771,8 @@ struct rigctld_client *rigctld_client_create(struct ev_loop *loop, struct mh_con
 	client->poll_timer.data = client;
 	ev_timer_init(&client->op_timeout_timer, rigcl_op_timeout_cb, 0., 0.);
 	client->op_timeout_timer.data = client;
+	ev_io_init(&client->child_log_w, rigcl_child_log_cb, -1, EV_READ);
+	client->child_log_w.data = client;
 	ev_io_init(&client->io_w, rigcl_io_cb, -1, EV_WRITE);
 	client->io_w.data = client;
 
@@ -649,6 +802,7 @@ void rigctld_client_destroy(struct rigctld_client *client) {
 
 	if(client->auto_start && child_pid > 0)
 		rigcl_ensure_dead(client->serial, child_pid);
+	rigcl_close_child_log(client, 1);
 
 	dbg0("%s rigctld client destroyed (%s)",
 	     client->serial ? client->serial : "<unknown>", radio_str(client->radio));

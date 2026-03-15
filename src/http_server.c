@@ -660,7 +660,7 @@ static void lsnr_cb (struct ev_loop *loop, struct ev_io *w, int revents) {
 
 	fd = net_accept(w->fd);
 	if(fd != -1) {
-		dbg0("%s(): accepted new connection, fd=%d", __func__, fd);
+		dbg1("%s(): accepted new connection, fd=%d", __func__, fd);
 
 		struct http_connection *hcon = w_calloc(1, sizeof(*hcon));
 		PG_NewList(&hcon->response_list);
