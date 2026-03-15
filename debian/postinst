@@ -21,11 +21,11 @@ case "$1" in
         # we don't run as root anymore
         if [ -d /var/log/mhuxd ]; then
             chown -R $MHUXD:$MHUXD /var/log/mhuxd
-            chmod 750 /var/log/mhuxd
+            chmod 755 /var/log/mhuxd
         fi        
         if [ -d /var/lib/mhuxd ]; then
             chown -R $MHUXD:$MHUXD /var/lib/mhuxd
-            chmod 750 /var/lib/mhuxd
+            chmod 755 /var/lib/mhuxd
         fi       
 
         # activate udev rules 
