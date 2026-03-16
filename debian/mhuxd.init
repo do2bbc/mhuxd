@@ -50,7 +50,7 @@ do_start()
                 chmod 755 /var/run/mhuxd
         fi
 
-  	[ -c /dev/cuse ] || modprobe cuse	
+  	modprobe cuse	
 
 	start-stop-daemon --start --quiet --chuid $MHUXD_USER --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
