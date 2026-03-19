@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <ev.h>
+#include "config.h"
 #include "mhcontrol.h"
 #include "mhflags.h"
 #include "util.h"
@@ -605,6 +606,12 @@ static void initializer_cb(unsigned const char *reply, int len, int result, void
 		break;
 	case CTL_STATE_INIT:
 		dbg0("%s initializer ping ok", ctl->serial);
+
+		if(ctl->mhi.flags & MHF_HAS_DISPLAY) {
+			mhc_display_host_string_event(ctl, 0, PACKAGE_STRING, 250, NULL, NULL);
+			mhc_display_host_string_event(ctl, 1, "", 250, NULL, NULL);
+		}
+
 		dbg0("%s get version", ctl->serial);
 		set_state(ctl, CTL_STATE_GET_VERSION);
 		submit_cmd_simple(ctl, MHCMD_GET_VERSION, initializer_cb, ctl);
@@ -1399,6 +1406,33 @@ void mhc_store_fsk_message(struct mh_control *ctl, uint8_t idx, const char *text
 	buf_append_c(&b, delay);
 	buf_append(&b, (uint8_t*)text, len);
 	buf_append_c(&b, (MHCMD_STORE_FSK_MSG_1 + (idx - 1)) | MSB_BIT);
+	submit_cmd(ctl, &b, cb, user_data);
+}
+
+void mhc_display_host_string_event(struct mh_control *ctl, uint8_t display_line, const char *text, uint8_t disp_time, mhc_cmd_completion_cb_fn cb, void *user_data) {
+	struct buffer b;
+	size_t len = strlen(text);
+
+	if(!(ctl->mhi.flags & MHF_HAS_DISPLAY)) {
+		err("%s() device does not support display host string event command!", __func__);
+		defer_callback(ctl->loop, cb, CMD_RESULT_ERROR, user_data);
+		return;
+	}
+
+	if(len > 16) {
+		warn("%s() text too longer that 16 characters!", __func__);
+		len = 16;
+	}
+
+	buf_reset(&b);
+	buf_append_c(&b, MHCMD_DISPLAY_HOST_STRING_EVENT);
+	buf_append_c(&b, display_line ? 1:0);
+	buf_append(&b, (uint8_t*)text, len);
+	buf_append(&b, (uint8_t*)"                ", 16 - len);
+	buf_append_c(&b, 0x00); // F1
+	buf_append_c(&b, 0x00); // F2
+	buf_append_c(&b, disp_time); // F2
+	buf_append_c(&b, MHCMD_DISPLAY_HOST_STRING_EVENT | MSB_BIT);
 	submit_cmd(ctl, &b, cb, user_data);
 }
 

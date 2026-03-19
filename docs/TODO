@@ -107,3 +107,5 @@ AmbientCapabilities=CAP_SYS_ADMIN
 2026-02-22 00:01:32.910 DBG1 (vsp) chan_in_cb()
 2026-02-22 00:01:32.910 DBG1 (vsp) dv_ioctl() cat1, cmd: 0x5402, arg: 0x7ffd2c475740, in_buf: 0x0, in_buf size: 0, out_bufsz: 0
 2026-02-22 00:01:32.910 DBG1 (vsp) chan_in_cb()
+
+18) Discard characters from connectors when keyer offline.
