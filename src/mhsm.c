@@ -28,6 +28,16 @@
 #define MAX_NAME_LEN (10)
 #define MAX_LABEL_LEN (5)
 
+size_t stc_strlcpy(char *dst, const char *src, size_t size) {
+	size_t src_len = strlen(src);
+	if(size > 0) {
+		size_t copy_len = src_len < size - 1 ? src_len : size - 1;
+		memcpy(dst, src, copy_len);
+		dst[copy_len] = '\0';
+	}
+	return src_len;
+}
+
 enum {
 	STATE_GET_ANTSW_EMPTY = 0,
 	STATE_GET_ANTSW_FIXED = 1,
@@ -1462,10 +1472,12 @@ int sm_antsw_mod_ant(struct sm *sm, struct cfg *cfg) {
 	}
 
 	str = cfg_get_val(cfg, "label", arec->o.label);
-	strncpy(arec->o.label, str, MAX_LABEL_LEN);
+	if(str != arec->o.label) // may point to the same address 
+		stc_strlcpy(arec->o.label, str, sizeof(arec->o.label));
 
 	str = cfg_get_val(cfg, "display", arec->o.name);
-	strncpy(arec->o.name, str, MAX_NAME_LEN);
+	if(str != arec->o.name) // may point to the same address 
+		stc_strlcpy(arec->o.name, str, sizeof(arec->o.name));
 
 	arec->steppir = cfg_get_int_val(cfg, "steppir", arec->steppir);
 	arec->rxonly = cfg_get_int_val(cfg, "rxonly", arec->rxonly);
@@ -1525,11 +1537,11 @@ int sm_antsw_mod_group(struct sm *sm, struct cfg *cfg) {
 
 	str = cfg_get_val(cfg, "label", grec->o.label);
 	if(str != grec->o.label) // may point to the same address 
-		strncpy(grec->o.label, str, MAX_LABEL_LEN);
+		stc_strlcpy(grec->o.label, str, sizeof(grec->o.label));
 
 	str = cfg_get_val(cfg, "display", grec->o.name);
 	if(str != grec->o.name) // may point to the same address 
-		strncpy(grec->o.name, str, MAX_NAME_LEN);
+		stc_strlcpy(grec->o.name, str, sizeof(grec->o.name));
 
 	grec->num_antennas = cfg_get_int_val(cfg, "num_antennas", grec->num_antennas);
 	grec->rxonly = cfg_get_int_val(cfg, "rxonly", grec->rxonly);
@@ -1594,7 +1606,7 @@ int sm_antsw_mod_band(struct sm *sm, struct cfg *cfg) {
 
 	str = cfg_get_val(cfg, "display", brec->o.name);
 	if(str != brec->o.name) // may point to the same address 
-		strncpy(brec->o.name, str, MAX_NAME_LEN);
+		stc_strlcpy(brec->o.name, str, sizeof(brec->o.name));
 
 	brec->low_freq = cfg_get_int_val(cfg, "low_freq", brec->low_freq);
 	brec->high_freq = cfg_get_int_val(cfg, "high_freq", brec->high_freq);
@@ -1749,10 +1761,12 @@ static int sm_antsw_mod_ant_json(struct sm *sm, json_t *obj) {
 
 	const char *str;
 	str = json_str_or(obj, "label", arec->o.label);
-	strlcpy(arec->o.label, str, MAX_LABEL_LEN);
+	if(str != arec->o.label)
+		stc_strlcpy(arec->o.label, str, sizeof(arec->o.label));
 
 	str = json_str_or(obj, "display", arec->o.name);
-	strlcpy(arec->o.name, str, MAX_NAME_LEN);
+	if(str != arec->o.name)
+		stc_strlcpy(arec->o.name, str, sizeof(arec->o.name));
 
 	arec->steppir = json_int_or(obj, "steppir", arec->steppir);
 	arec->rxonly = json_int_or(obj, "rxonly", arec->rxonly);
@@ -1805,11 +1819,11 @@ static int sm_antsw_mod_group_json(struct sm *sm, json_t *obj) {
 	const char *str;
 	str = json_str_or(obj, "label", grec->o.label);
 	if(str != grec->o.label)
-		strncpy(grec->o.label, str, MAX_LABEL_LEN);
+		stc_strlcpy(grec->o.label, str, sizeof(grec->o.label));
 
 	str = json_str_or(obj, "display", grec->o.name);
 	if(str != grec->o.name)
-		strncpy(grec->o.name, str, MAX_NAME_LEN);
+		stc_strlcpy(grec->o.name, str, sizeof(grec->o.name));
 
 	grec->num_antennas = json_int_or(obj, "num_antennas", grec->num_antennas);
 	grec->rxonly = json_int_or(obj, "rxonly", grec->rxonly);
@@ -1869,7 +1883,7 @@ static int sm_antsw_mod_band_json(struct sm *sm, json_t *obj) {
 	const char *str;
 	str = json_str_or(obj, "display", brec->o.name);
 	if(str != brec->o.name)
-		strncpy(brec->o.name, str, MAX_NAME_LEN);
+		stc_strlcpy(brec->o.name, str, sizeof(brec->o.name));
 
 	brec->low_freq = json_int_or(obj, "low_freq", brec->low_freq);
 	brec->high_freq = json_int_or(obj, "high_freq", brec->high_freq);
