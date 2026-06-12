@@ -64,6 +64,8 @@ void log_msg(int severity, const char *header, const char *fmt, ...)
 #define dbg1(fmt, args...)              if(log_level >= LOGSV_DBG1) log_msg(LOGSV_DBG1, "("MOD_ID")", fmt"\n", ##args)
 #define dbg1_h(msg1, msg2, buf, len)    if(log_level >= LOGSV_DBG1) log_hex(LOGSV_DBG1, "(" MOD_ID ")", msg1, msg2, (const char*) buf, len)
 #define dbg1_j(msg1, msg2, obj)         if(log_level >= LOGSV_DBG1) log_json(LOGSV_DBG1, "(" MOD_ID ")", msg1, msg2, obj)
+#define dbg0_e(e, fmt, args...)  \
+        if(log_level >= LOGSV_DBG0) dbg0(fmt" (%s)" , ##args, strerror(e))
 #define fatal_e(e, fmt, args...)        \
         fatal(fmt" (%s)" , ##args, strerror((e))
 #define err_e(e, fmt, args...)  \
@@ -72,8 +74,6 @@ void log_msg(int severity, const char *header, const char *fmt, ...)
         warn(fmt" (%s)" , ##args, strerror(e))
 #define info_e(e, fmt, args...) \
         info(fmt" (%s)" , ##args, strerror(e))
-#define dbg0_e(e, fmt, args...) \
-        if(log_level >= LOGSV_DBG0) dbg0(fmt" (%s)" , ##args, strerror(e))
 #define dbg1_e(e, fmt, args...) \
         if(log_level >= LOGSV_DBG1) dbg1(fmt" (%s)" , ##args, strerror(e))
 

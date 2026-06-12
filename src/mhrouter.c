@@ -294,8 +294,14 @@ static void producer_cb(struct ev_loop *loop, struct ev_io *w, int revents) {
 	if(!(revents & EV_READ))
 		return;
 
-	if(router->fd == -1)
+	if(router->fd == -1) {
+		// nothing to route to, discard..
+		char b[1024];
+		do {
+			r = read(prd->fd, b, sizeof(b));
+		} while(r > 0 || (r < 0 && errno == EINTR));
 		return;
+	}
 
 	b = &router->channel_buf_out[prd->channel];
 
