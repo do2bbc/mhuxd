@@ -10,7 +10,8 @@ webui/static/arimo700.woff
 *.o
 *.a
 *~
-.*
+.claude
+.vscode
 config.sub
 aclocal.m4
 .gitignore
