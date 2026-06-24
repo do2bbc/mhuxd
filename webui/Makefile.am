@@ -3,9 +3,12 @@ webuistaticdir = $(WEBUIDIR)/static
 webuicsdir = $(WEBUIDIR)/cs
 webuisveltedir = $(WEBUIDIR)/svelte
 
+# The Svelte UI is built ahead of time on the maintainer's machine and its
+# compiled output is committed under svelte/dist. Packaging therefore needs
+# neither npm nor network access (e.g. offline builders like Launchpad PPAs).
+# Run "make svelte-ui-build" to regenerate svelte/dist after editing the UI.
 SVELTE_SRC_DIR = $(abs_srcdir)/svelte
-SVELTE_DIR = $(abs_builddir)/svelte
-SVELTE_BUILD_DIR = $(SVELTE_DIR)/dist
+SVELTE_DIST_DIR = $(srcdir)/svelte/dist
 SVELTE_NPM ?= npm
 
 dist_hdf_DATA = \
@@ -92,38 +95,28 @@ EXTRA_DIST = \
 	svelte/package-lock.json \
 	svelte/vite.config.js \
 	svelte/svelte.config.js \
+	svelte/jsconfig.json \
 	svelte/index.html \
 	svelte/src \
+	svelte/dist \
 	hdf/mhuxd.hdf
 
-svelte-ui-build:
-	@echo "Starte Svelte Build Prozess..."
-	@if test "$(abs_srcdir)" != "$(abs_builddir)"; then \
-		$(MKDIR_P) "$(SVELTE_DIR)"; \
-		cp -R "$(SVELTE_SRC_DIR)"/package*.json "$(SVELTE_SRC_DIR)"/*config.js "$(SVELTE_SRC_DIR)"/index.html "$(SVELTE_SRC_DIR)"/src "$(SVELTE_DIR)"/; \
-		chmod -R u+w "$(SVELTE_DIR)"; \
-	fi
-	cd "$(SVELTE_DIR)" && "$(SVELTE_NPM)" install && "$(SVELTE_NPM)" run build
-
+# Install the pre-built Svelte UI. No npm/network access required.
+# Normalize permissions after copying: the committed sources may be read-only
+# (e.g. under "make distcheck"), and cp -R would otherwise carry that over and
+# break uninstall.
 install-data-local:
 	$(MKDIR_P) "$(DESTDIR)$(webuisveltedir)"
-	cp -R "$(SVELTE_BUILD_DIR)"/. "$(DESTDIR)$(webuisveltedir)"/
-
-all-local: svelte-ui-build
+	cp -R "$(SVELTE_DIST_DIR)"/. "$(DESTDIR)$(webuisveltedir)"/
+	chmod -R u+rwX,go+rX,go-w "$(DESTDIR)$(webuisveltedir)"
 
 uninstall-local:
 	@rm -rf "$(DESTDIR)$(webuisveltedir)"
 
-clean-local:
-	rm -f svelte-ui-build
-	rm -rf "$(SVELTE_BUILD_DIR)"
+# Maintainer convenience target: rebuild svelte/dist from sources. This needs
+# npm and network access and is only ever run on the developer's machine, never
+# at package build time. The resulting svelte/dist is committed to the repo.
+svelte-ui-build:
+	cd "$(SVELTE_SRC_DIR)" && "$(SVELTE_NPM)" install && "$(SVELTE_NPM)" run build
 
-distclean-local:
-	@if test "$(abs_srcdir)" != "$(abs_builddir)"; then \
-		rm -rf "$(SVELTE_DIR)"; \
-	else \
-		rm -rf "$(SVELTE_BUILD_DIR)" "$(SVELTE_DIR)/node_modules"; \
-	fi
-
-# For automake
 .PHONY: svelte-ui-build

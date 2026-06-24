@@ -13,12 +13,8 @@
 	dh $@ --with autoreconf
 
 
-override_dh_auto_build:
-	# Build the Svelte Web UI
-	cd webui/svelte && npm install && npm run build
-	dh_auto_build
-	# Continue with standard build
-	dh_auto_build
+# The Svelte web UI is shipped pre-built (webui/svelte/dist), so the package
+# build needs neither npm nor network access. Nothing to override here.
 
 override_dh_installudev:
 	dh_installudev --priority 59 -n

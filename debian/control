@@ -10,8 +10,6 @@ Build-Depends: debhelper-compat (= 12),
                libudev-dev,
                libfuse-dev,
                libjansson-dev,
-               nodejs,
-               npm,
                adduser
 Standards-Version: 3.9.2
 Homepage: http://mhuxd.dj5qv.de
