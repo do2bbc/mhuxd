@@ -145,7 +145,6 @@ app_ctx *app_ctx_init(struct app_ctx *ctx, struct ev_loop *loop) {
 
         } else {
             info("no legacy config file %s found, starting with empty configuration.", cfgmgr_get_cfg_path());
-            return ctx;
         }
     } else if(rc_j < 0) {
         err("error initializing json config manager!");
