@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <signal.h>
 #include <ev.h>
 #include "clearsilver/util/neo_err.h"
 #include "config.h"
@@ -36,6 +37,12 @@ int main(int argc, char **argv)
 {
 	struct ev_loop *loop;
 	FILE *pidfile = NULL;
+
+	// Ignore SIGPIPE: writing to a socket whose peer has closed (e.g. a
+	// browser aborting a request on reload) would otherwise terminate the
+	// daemon. With SIGPIPE ignored, write() returns EPIPE and the HTTP
+	// server tears the connection down gracefully.
+	signal(SIGPIPE, SIG_IGN);
 
 	// options
 	process_opts(argc, argv);
