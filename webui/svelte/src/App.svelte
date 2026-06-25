@@ -127,6 +127,23 @@
 
   // Subscribe to WS events
   const unsubStatus = onWsEvent('status', (data) => {
+    const known = devices.find(d => d.serial === data.serial);
+
+    // A keyer the UI doesn't know about yet just reported its state — pull the
+    // complete device and config info (same as a manual reload) to create its tab.
+    if (!known) {
+      reloadData().catch(() => { /* keep current state on failure */ });
+      return;
+    }
+
+    // Known keyer came ONLINE but we still lack its firmware version: the first
+    // state event arrived before the handshake populated it. Reload once to pick it up.
+    const fwUnknown = !known.verFwMajor && !known.verFwMinor;
+    if (data.status === 'ONLINE' && fwUnknown) {
+      reloadData().catch(() => { /* keep current state on failure */ });
+      return;
+    }
+
     devices = devices.map(d =>
       d.serial === data.serial ? { ...d, status: data.status } : d
     );
