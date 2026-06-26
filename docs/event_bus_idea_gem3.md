@@ -13,9 +13,6 @@ These are low-frequency, broadcast-style events that multiple modules (like `res
 // Event Types
 enum app_event_type {
     EV_DEV_HOTPLUG,       // OS-level connect/disconnect (udev)
-    EV_DEV_ADDED,         // Device fully initialized by devmgr
-    EV_DEV_REMOVED,       // Device removed from devmgr
-    EV_ROUTER_STATUS,     // Router connection state changed
     EV_KEYER_STATE,       // Keyer lifecycle (ONLINE, OFFLINE, etc.)
     EV_KEYER_MODE,        // Radio mode changed (CW, VOICE, etc.)
     EV_KEYER_MOK_STATE,   // microKEYER internal state changed
