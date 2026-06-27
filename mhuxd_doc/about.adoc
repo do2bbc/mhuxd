@@ -1,4 +1,4 @@
-[about]
+[#about]
 == About
 
 Mhuxd is a device router for microHam keyers. It runs on the Linux operating system only. Supported microHam keyers are:
@@ -10,24 +10,29 @@ Mhuxd is a device router for microHam keyers. It runs on the Linux operating sys
 * DIGI KEYER II
 * MK2R & MK2R+
 * CW KEYER
+* Station Master / Station Master DeLuxe ([red]#experimental#)
 
 
-==== Features
+=== Features
 
 * automatically discovers any supported microHam keyers
 * handles multiple keyers simultaneously
-* graphical web front end to perform configuration changes
+* graphical web front end to perform configuration changes, with live status updates
 * can provide configurable virtual serial ports and routes those to specific keyer channels (e.g. CAT, K1EL Winkey etc.)
-* configuration of the K1EL Winkey chip
+* can provide TCP/IP network ports (IPv4 and IPv6)
+* configuration of the K1EL Winkey chip, including CW/FSK message memories
 * configuration of the microKEYER II / III display
+* keeps the keyer mode in sync with the rig mode through an external backend (rigctld / flrig)
+* antenna switching configuration for Station Master ([red]#experimental#)
+* REST API with a server-sent event stream, used by the web interface
 
-==== License
+=== License
 
 Mhuxd is available under the GNU General Public License, version 2.
 
 ClearSilver is licensed under the New BSD license.
 
-==== Acknowledgements:
+=== Acknowledgements
 
 
 * microHam – For providing the protocol specification and support

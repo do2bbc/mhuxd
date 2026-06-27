@@ -17,18 +17,9 @@
 :title-page-background-image: image:title-bg.png[]
 //:title-logo-image: image:logo.png[top=25%,align=center,pdfwidth=0.5in]
 
-////
-Change Book Name, Author's Name and Language for your need.
-
-This is a comment block, you can remove it.
-////
-
-////
-Organize your book chapter by chapter
-////
 [.text-center]
 ©DJ5QV +
-Doc version 0.6
+Doc version 0.90
 
 
 include::about.adoc[]
@@ -37,10 +28,11 @@ include::installation.adoc[]
 
 include::the_webui.adoc[]
 
+include::port_routing.adoc[]
+
+include::port_permissions.adoc[]
+
 include::keyer_config.adoc[]
-
-
-
 
 include::index.adoc[]
 
