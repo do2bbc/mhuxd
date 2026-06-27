@@ -1,0 +1,80 @@
+[keyer_config]
+== Keyer Configuration
+
+=== Keyer Pages
+
+Mhuxd supports multiple keyers simultaneously. Therefore for each detected keyer a separate page is created in the WebUI.
+
+image::mhuxd_keyer_tabs.png[]
+
+{empty} +
+
+The left side menu contains the configuration categories. Not all categories are available for each keyer type.
+
+.Menu for the micro Keyer II. The available categories depend on the keyer type.
+image::mhuxd_left_menu.png[]
+
+{empty} +
+
+=== Menu Keyer Mode
+* *Keyer Mode Follows RIG* – Only available for DK2, MK2 and MK2R+. With this option enabled the keyer sets the keyer mode according to the rig mode. For this to work you must have configured the rig type and serial parameters in the “Radio Menu”. Additionally the option “Use CAT Decoder if Connected” must be enabled there.
+* *Current Mode* – This shows the current keyer mode and allows to change it. Note that this page does not update automatically. You can push the refresh button of you browser to update this page.
+
+{empty} +
+
+=== Menu Radio
+This menu is not available for CW KEYER. This page allows to configure the serial parameters between the keyer and the transceiver:
+
+* Baud Rate
+* Data Bits
+* Stop Bits
+* RTS/CTS Handshake
+
+Refer to your transceivers manual on how to set these parameters.
+
+For DIGI KEYER II, micro KEYER II and MK2R(+) additional options are available. These options affect the keyers capability to send CAT commands to the rig on its own:
+
+* *Rig Type:* Select your rig. This tells the keyers internal CAT decoder which rig is attached. If it is in Icom the selection will autofill the Icom Address field. You may choose “none” here which will reliably disable CAT queries from the keyer.
+* *Icom Address:* If you use an Icom rig this field must contain the Icom address in decimal notation. Usually this field gets auto filled from the Rig Type selection.
+* *PW1 connected:* Select this option if you have an Icom PW1 amplifier connected to the same bus as the rig. When enabled the keyer will periodically generate “auto-info”, preventing queries (and possible collisions) by PW1.
+* *Digital Over Voice:* Choose how LSB, USB and FM modes are interpreted:
+** *Band Map* – set keyer mode according to band map
+** *Always Voice* – set keyer mod always to VOICE
+** *Always Digital* – set keyer mode always to DIGITAL
+* *Use CAT Decoder if Connected:* Select this to enable the keyers CAT decoder even when the keyer is USB connected to a computer. The CAT decoder is used to synchronize the keyers mode with the rig mode. If disabled the keyer mode must be selected in the WebUI or by an application. The decoder is always active when the keyer is not USB connected to a computer.
+* *Don’t Interfere USB control:* Disable CAT queries by the keyer if it is USB connected to a computer. Only answers to the computer will be interpreted. [red]#This may not work as advertised for DIGI KEYER II and maybe other keyers.#
+
+NOTE: The original microHam device router for Windows can interpret CAT commands and even send CAT requests. This way the device router can synchronize the keyer mode with the rig mode automatically. Such functionality is not implemented in mhuxd (yet).
+
+=== Menu AUX
+This menu is only available for keyers with AUX support (microKEYER II). Allows to specify the serial parameters of the AUX port.
+
+=== Menu PTT
+This page allows the configuration of the PTT operation. The available options vary between keyer types.
+
+NOTE: This is a very basic overview. Please refer also to the original microHam documentation for your keyer.
+
+
+* *PTT CW* – Select PTT source(s) for CW mode
+* *PTT Voice* – Select PTT source(s) for VOICE mode
+* *PTT Digital* – Select PTT source(s) for DIGITAL mode
+* *LNA PTT* – Enable LNA PTT relay
+* *PA PTT* – Enable PA PTT relay
+* *PA PTT Tail (x 10ms)* – PA PTT Tail time
+* *LNA PTT Tail (x 10ms)* – LNA PTT Tail time
+* *PTT Lead (x 10ms)* – PTT Lead time
+* *CW in Voice* – Allow CW operation in VOICE mode (MK2, MK2R(+) only)
+* *Sound Card PTT* – key PTT when soundcard produces audio (MK2, DK2 only)
+* *Downstream over Footswitch* – when soundcard produces audio the audio source will be switched from microphone to sound card, even if the foot switch is pressed (untested, DK2, MK2 only)
+
+
+=== Menu Display
+This menu is available for MK2/3 only. The first section “Display Option” allows configuration of the displays brightness, contrast and it’s default content.
+
+In the second section “Display Report” you can chose which events you want to have displayed.
+
+=== Menu CW
+This menu is currently only available for keyers containing a K1EL Winkey chip. In the first section certain Winkey parameters can be configured.
+
+Detailed description on the TODO list. Meanwhile please refer to your keyers documentation and/or to the Winkey1 Version 10 document at www.k1el.com.
+

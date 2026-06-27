@@ -1,0 +1,44 @@
+[installation]
+== Installation
+
+=== Installation from package 
+work-in-progress, home page http://mhuxd.dj5qv.de should provide up-to-date steps to install packages for Debian and Debian based distributions, e.g. Ubuntu.
+
+=== Compiling from Source
+
+{empty} +
+
+Download the source from the Download page and extract it, e.g.
+
+`tar -xzvf mhuxd-0.53.tar.gz`
+
+{empty} +
+
+Change into the source directory. Perform:
+
+`export CFLAGS=-O2`
+
+`./configure`
+
+`make`
+
+`make install`
+
+
+This will install everything into /usr/local. If you want everything in a single folder you can use the –prefix option of configure:
+
+`./configure --prefix=/usr/local/mhuxd-0.50`
+
+`make`
+
+`make install`
+
+Make sure that the required kernel modules are loaded:
+
+`modprobe ftdi_sio`
+
+`modprobe cuse`
+
+Start mhuxd on command line:
+
+`sudo /usr/local/sbin/mhuxd`

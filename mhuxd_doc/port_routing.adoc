@@ -1,0 +1,33 @@
+[port_routing]
+== Port Routing
+
+=== About Ports
+Similar to the virtual COM ports of the microHam Windows Device Router mhuxd can provide virtual serial ports (VSP). VSPs are implemented using the Linux CUSE driver, hence the cuse kernel module must be loaded and the device /dev/cuse must exist.
+
+Alternatively mhuxd also offers TCP/IP network ports. This feature is experimental.
+
+=== Port Page
+To access the port page select tab “Daemon” menu “Ports. The first section shows a list of active ports. With a new mhuxd installation this list will be empty. It also allows to remove ports by selecting them and pushing the “Remove” button.
+
+image::mhuxd_portlist.png[]
+
+In the second section ports can be added. There are 2 type of ports available:
+
+* VSP – virtual serial port
+* TCP – TCP/IP network port ([red]#experimental#)
+
+=== Add a VSP Port
+To add a VSP port select the VSP port type and the keyer it should be routed to:
+
+image::mhuxd_addport1.png[]
+Press “Continue. In the next page specify the device name. VSP devices are always located in `/dev/mhuxd/`. Select the destination channel. That means the keyer channel where the port should be routed to. Optionally you may select “PTT via RTS” and/or “PTT via DTR”. With this option set an application can key the PTT using RTS and/or DTR signals.
+
+image::mhuxd_addport3.png[]
+It is not suggested to use PTT/RTS or PTT/DTR on the CAT channel. Better use a dedicated PTT VSP device and route it to the PTT channel:
+
+image::mhuxd_addport_ptt.png[]
+
+=== Add a TCP Port
+To add a TCP port select the TCP port type and the keyer it should be routed to. In the next page enter a TCP port number. You may select “Remote Accessible”. This would allow other computers to connect to this port. [red]#Don’t do this if your computer is directly connected to the internet or in an insecure network!#
+
+image::mhuxd_addport_tcp.png[]

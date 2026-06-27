@@ -1,0 +1,37 @@
+[the_webui]
+== The WebUI
+
+The WebUI provides a graphical interface to mhuxd. It is only accessible locally, that means on the computer where mhuxd is running.
+
+To access the WebUI make sure that mhuxd is running. Open the web interface on:
+
+http://localhost:5052
+
+
+
+.WebUI Home page
+image::mhuxd_home.png[]
+
+The web interface consists of several tabs:
+
+
+image::mhuxd_all_tabs.png[]
+
+* *Home* – showing some generic information and a list of detected microHam keyers
+* *Daemon* – configuration of the virtual serial ports and log level
+* *Keyer tabs* – each detected keyer has it’s own tab allowing keyer specific configuration
+
+{empty} +
+
+image::mhuxd_led_green.png[float="left",align="left"] 
+Keyer is connected and online
+
+image::mhuxd_led_yellow.png[float="left",align="left"] 
+Keyer is connected but not online (powered off)
+
+image::mhuxd_led_red.png[float="left",align="left"] 
+Keyer is not connected
+
+{empty} +
+
+WARNING: Currently the status LEDs do not update automatically. The status can be updated by pressing the refresh button of the browser.
