@@ -40,3 +40,4 @@ ClearSilver is licensed under the New BSD license.
 * Brandon Long – For the ClearSilver template system
 * Igor Sysoev, Joyent Inc. et al. – For http_parser
 * Google Inc., Filipe Almeida – For streamhtmlparser
+* Petri Lehtinen - For libjansson

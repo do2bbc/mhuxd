@@ -38,8 +38,9 @@ Mhuxd is a device router for microHam keyers. Currently it runs on the Linux ope
 - DIGI KEYER II
 - MK2R & MK2R+
 - CW KEYER
+- Experimental: Station Master (DeLuxe)
 
-Starting with version 0.50 mhuxd provides a web interface. It allows to perform keyer configuration changes including Winkey configuration. Once mhuxd is running the web interfaces can be accessed at:
+mhuxd provides a web interface for configuration. It allows to perform keyer configuration changes including Winkey configuration. Once mhuxd is running the web interfaces can be accessed at:
 
 [http://localhost:5052](http://localhost:5052)
 
@@ -55,6 +56,7 @@ Similar to the microHam device router mhuxd can create virtual serial ports. Thi
 - libfuse
 - libev
 - libudev
+- libjannson
 
 Mhuxd doesn't need to run as root. However it needs read/write access to `/dev/cuse` which is typically owned by root.
 
@@ -86,3 +88,4 @@ If you cloned the source code from GITHUB then you also need the packages `autoc
 - **Brandon Long** - For the ClearSilver template system
 - **Igor Sysoev, Joyent Inc. et al.** - For http\_parser
 - **Google Inc., Filipe Almeida** - For streamhtmlparser
+- **Petri Lehtinen** - For libjannson
