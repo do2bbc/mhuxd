@@ -1,0 +1,20 @@
+[Unit]
+Description=mhuxd protocol multiplexer for microHam keyers
+Documentation=man:mhuxd(8)
+After=network.target
+
+[Service]
+Type=forking
+User=mhuxd
+Group=mhuxd
+# Load cuse unconditionally, presence of /dev/cuse doesn't guarantee that
+# cuse is loaded. The module load triggers the udev rule that grants the
+# mhuxd user access to /dev/cuse. The "+" runs this as root despite User=.
+ExecStartPre=+/sbin/modprobe cuse
+ExecStart=/usr/sbin/mhuxd -b
+PIDFile=/run/mhuxd/mhuxd.pid
+RuntimeDirectory=mhuxd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
