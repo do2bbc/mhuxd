@@ -19,3 +19,11 @@
 override_dh_installudev:
 	dh_installudev --priority 59 -n
 
+# install-data-local (src/Makefile.am) creates the runtime dir under
+# $(RUNDIR) for plain "make install" use. On Debian it's recreated at
+# boot by debian/mhuxd.tmpfile instead, so drop the empty dir lintian
+# flags as dir-or-file-in-var-run.
+override_dh_auto_install:
+	dh_auto_install
+	rmdir --ignore-fail-on-non-empty --parents debian/mhuxd/var/run/mhuxd
+

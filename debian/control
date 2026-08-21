@@ -18,5 +18,6 @@ Package: mhuxd
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: acl, adduser, ${shlibs:Depends}, ${misc:Depends}
+Suggests: libhamlib-utils
 Description: Device Router for microHam keyers.
  Mhuxd is a device router daemon for microHam keyers.
