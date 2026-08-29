@@ -77,7 +77,7 @@ void log_reopen(void) {
 	}
 }	
 
-void log_open(uint8_t use_stdout) {
+int8_t log_open(uint8_t use_stdout) {
 	if(use_stdout) {
 		file = stdout;
 	} else {
@@ -87,8 +87,9 @@ void log_open(uint8_t use_stdout) {
 
 	if(file == NULL) {
 		fprintf(stderr, "could not open logfile %s (%s)!\n", log_file_name, strerror(errno));
-		return;
+		return -1;
 	}
+	return 0;
 }
 
 void log_close(void) {

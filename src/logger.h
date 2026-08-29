@@ -34,7 +34,7 @@ inline static int log_get_level(void) {
 	return log_level;
 }
 
-void log_open(uint8_t use_stdout);
+int8_t log_open(uint8_t use_stdout);
 void log_close(void);
 void log_set_file_name(const char *name);
 const char *log_get_file_name(void);

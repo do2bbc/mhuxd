@@ -49,7 +49,9 @@ int main(int argc, char **argv)
 	if(-1 == log_set_level_by_str(log_level_str)) // from opt.c
 		fprintf(stderr, "Invalid log level: %s", log_level_str);
 
-	log_open(background ? 0 : 1);
+	if(log_open(background ? 0 : 1)) {
+		return -1;
+	}
 
 	if(background) {
 		dmn_daemonize();
