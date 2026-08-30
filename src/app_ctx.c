@@ -53,7 +53,7 @@ static void sigint_cb(struct ev_loop *loop, struct ev_signal *w, int revents)
 }
 static void sighup_cb(struct ev_loop *loop, struct ev_signal *w, int revents) {
         info("*** SIGHUP received-> closing log file");
-        log_reopen(); 
+        log_reopen();
 }
 
 static int cb_redirect_home(struct http_connection *hcon, const char *path, const char *query,

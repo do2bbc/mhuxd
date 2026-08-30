@@ -69,12 +69,17 @@ const char *log_get_file_name(void) {
 	return log_file_name;
 }
 
-void log_reopen(void) {
+int8_t log_reopen(void) {
 	if(file && file != stdout) {
 		fclose(file);
 		file = fopen(log_file_name, "ae");
+		if(file == NULL) {
+			fprintf(stderr, "could not re-open logfile %s (%s)!\n", log_file_name, strerror(errno));
+			return -1;
+		}
 		info("*** logfile reopened");
 	}
+	return 0;
 }	
 
 int8_t log_open(uint8_t use_stdout) {

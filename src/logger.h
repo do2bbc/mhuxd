@@ -38,7 +38,7 @@ int8_t log_open(uint8_t use_stdout);
 void log_close(void);
 void log_set_file_name(const char *name);
 const char *log_get_file_name(void);
-void log_reopen(void);
+int8_t log_reopen(void);
 
 void log_set_ident(const char *);
 void log_set_level(int level);
