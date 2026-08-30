@@ -410,6 +410,19 @@
       [serial]: { ...perSerial, [kind]: { ...perKind, [index]: value } }
     };
   };
+
+  // The keyer ignores lower case characters, so force messages to upper case
+  // while typing, keeping the caret where the user left it.
+  const handleMessageInput = (serial, kind, index, target) => {
+    const upper = (target.value ?? '').toUpperCase();
+    if (upper !== target.value) {
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      target.value = upper;
+      if (start !== null) target.setSelectionRange(start, end);
+    }
+    updateMessageForm(serial, kind, index, upper);
+  };
   
   const flattenParamEntries = (param = {}) => {
     const entries = [];
@@ -498,7 +511,7 @@
   const applyMessages = async (serial, kind) => {
     const perSerial = messageForm[serial] || {};
     const perKind = perSerial[kind] || defaultMessageForm(serial, kind);
-    const payload = messageSlots.map((idx) => ({ index: idx, text: perKind[idx] ?? '' }));
+    const payload = messageSlots.map((idx) => ({ index: idx, text: (perKind[idx] ?? '').toUpperCase() }));
     const key = kind === 'cw' ? 'cwMessages' : 'fskMessages';
   
     try {
@@ -3146,7 +3159,7 @@
               style="flex:1;"
               type="text"
               value={messageForm[activeSerial]?.cw?.[idx] ?? ''}
-              on:input={(e) => updateMessageForm(activeSerial, 'cw', idx, e.target.value)}
+              on:input={(e) => handleMessageInput(activeSerial, 'cw', idx, e.target)}
             />
             <button class="btn" type="button" on:click={() => playMessage(activeSerial, idx)}>Test</button>
           </div>
@@ -3175,7 +3188,7 @@
               style="flex:1;"
               type="text"
               value={messageForm[activeSerial]?.fsk?.[idx] ?? ''}
-              on:input={(e) => updateMessageForm(activeSerial, 'fsk', idx, e.target.value)}
+              on:input={(e) => handleMessageInput(activeSerial, 'fsk', idx, e.target)}
             />
             <button class="btn" type="button" on:click={() => playMessage(activeSerial, idx)}>Test</button>
           </div>
