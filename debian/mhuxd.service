@@ -20,7 +20,7 @@ PIDFile=/run/mhuxd/mhuxd.pid
 RuntimeDirectory=mhuxd
 Restart=on-failure
 # Would default to 100ms
-RestartUSec=5
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
