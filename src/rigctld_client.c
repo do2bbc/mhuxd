@@ -35,6 +35,9 @@
 #define RIGCL_DEF_IO_TIMEOUT_MS (1500)
 #define RIGCL_DEF_POLL_MS (500)
 
+#define RIGCL_RESPAWN_INITIAL_MS (100)
+#define RIGCL_RESPAWN_MAX_MS     (60000)
+
 #define RIGCL_NUM_COMMANDS 3
 #define RIGCL_CMD_STRING "+\\get_vfo_info VFOA\n+\\get_vfo_info VFOB\n+\\get_vfo_info currVFO\n"
 
@@ -64,6 +67,9 @@ struct rigctld_client {
 	char *rigctld_options;
 	pid_t child_pid;
 	ev_child child_watcher;
+	ev_tstamp respawn_not_before; /* earliest allowed respawn (ev_now based) */
+	int respawn_fails;           /* consecutive child exits (log display only) */
+	int respawn_delay_ms;        /* current backoff delay, doubled on each exit */
 	int child_log_fd;
 	ev_io child_log_w;
 	char child_log_buf[512];
@@ -208,10 +214,29 @@ static void rigcl_child_cb(struct ev_loop *loop, ev_child *w, int revents) {
 	(void)revents;
 	struct rigctld_client *client = w->data;
 	ev_child_stop(loop, w);
-	dbg0("%s auto-started rigctld pid=%d exited status=%d",
-	     client->serial, w->rpid, w->rstatus);
+
+	if(WIFEXITED(w->rstatus)) {
+		warn("%s auto-started rigctld pid=%d exited code=%d",
+		     client->serial, w->rpid, WEXITSTATUS(w->rstatus));
+	} else if(WIFSIGNALED(w->rstatus)) {
+		warn("%s auto-started rigctld pid=%d killed by signal %d",
+		     client->serial, w->rpid, WTERMSIG(w->rstatus));
+	} else {
+		warn("%s auto-started rigctld pid=%d exited status=%d",
+		     client->serial, w->rpid, w->rstatus);
+	}
+
 	client->child_pid = 0;
 	rigcl_close_child_log(client, 1);
+
+	// Try to respawn terminated rigctld. Double the respawn interval with every iteration till RIGCL_RESPAWN_MAX_MS.
+	client->respawn_not_before = ev_now(client->loop) + (ev_tstamp)client->respawn_delay_ms / 1000.0;
+	dbg0("%s rigctld gone, will respawn in %d ms (attempt %d)",
+	     client->serial, client->respawn_delay_ms, client->respawn_fails + 1);
+	client->respawn_fails++;
+	client->respawn_delay_ms <<= 1;
+	if(client->respawn_delay_ms > RIGCL_RESPAWN_MAX_MS)
+		client->respawn_delay_ms = RIGCL_RESPAWN_MAX_MS;
 }
 
 static void rigcl_spawn_rigctld(struct rigctld_client *client) {
@@ -296,6 +321,7 @@ static void rigcl_spawn_rigctld(struct rigctld_client *client) {
 	ev_io_start(client->loop, &client->child_log_w);
 	ev_child_init(&client->child_watcher, rigcl_child_cb, pid, 0);
 	client->child_watcher.data = client;
+	// libev child watcher works in default loop only
 	ev_child_start(EV_DEFAULT_ &client->child_watcher);
 	dbg0("%s rigctld auto-started pid=%d", client->serial, (int)client->child_pid);
 }
@@ -509,6 +535,15 @@ static void rigcl_parse_response(struct rigctld_client *client) {
 
 	client->last_info = info;
 	mhc_update_radio_info(client->ctl, MOD_ID, &info);
+
+	/* A successful poll means rigctld is alive and talking -- reset the
+	 * respawn backoff so the next crash starts fresh. */
+	if(client->respawn_fails) {
+		info("%s rigctld connection healthy again", client->serial);
+		client->respawn_fails = 0;
+		client->respawn_not_before = 0.;
+		client->respawn_delay_ms = RIGCL_RESPAWN_INITIAL_MS;
+	}
 }
 
 static void rigcl_op_fail(struct rigctld_client *client, const char *where, int errsv) {
@@ -660,7 +695,13 @@ static void rigcl_start_request(struct rigctld_client *client) {
 
 	if(client->fd == -1) {
 		if(rigcl_open_nonblock_socket(client->host, client->port, &client->fd) != 0) {
-			dbg0("%s rigctld connect open failed (%s:%d)", client->serial, client->host, client->port);
+			/* Expected while we're waiting out the respawn backoff; keep
+			 * this at dbg1 so the log isn't flooded every poll_ms. */
+			if(!(client->auto_start && client->child_pid == 0)) {
+				warn("%s rigctld connect open failed (%s:%d)", client->serial, client->host, client->port);
+			} else {
+				dbg0("%s rigctld connect open failed (%s:%d)", client->serial, client->host, client->port);
+			}
 			client->fd = -1;
 			return;
 		}
@@ -702,11 +743,15 @@ static void rigcl_start(struct rigctld_client *client) {
 		return;
 	if(client->running)
 		return;
+
+	client->respawn_fails = 0;
+	client->respawn_not_before = 0.;
+	client->respawn_delay_ms = RIGCL_RESPAWN_INITIAL_MS;
 	rigcl_spawn_rigctld(client);
 	ev_timer_set(&client->poll_timer, 0., (double)client->poll_ms / 1000.0);
 	ev_timer_start(client->loop, &client->poll_timer);
 	client->running = 1;
-	dbg1("%s %s start polling (%s backend=%s %s:%d poll_ms=%d connect_timeout_ms=%d)",
+	info("%s %s start polling (%s backend=%s %s:%d poll_ms=%d connect_timeout_ms=%d)",
 	     client->serial, __func__, radio_str(client->radio), client->backend,
 	     client->host, client->port, client->poll_ms, client->connect_timeout_ms);
 }
@@ -719,6 +764,14 @@ static void rigcl_poll_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
 
 	if(!client || !client->running)
 		return;
+
+	// If we lost the child, try to re-spawn.
+	if(client->auto_start && client->child_pid == 0 &&
+	   ev_now(client->loop) >= client->respawn_not_before) {
+		dbg0("%s rigctld gone, respawning", client->serial);
+		rigcl_spawn_rigctld(client);
+	}
+
 	rigcl_start_request(client);
 }
 
@@ -764,6 +817,9 @@ struct rigctld_client *rigctld_client_create(struct ev_loop *loop, struct mh_con
 	client->child_pid = 0;
 	client->child_log_fd = -1;
 	client->fd = -1;
+	client->respawn_not_before = 0.;
+	client->respawn_fails = 0;
+	client->respawn_delay_ms = RIGCL_RESPAWN_INITIAL_MS;
 	client->last_info.radio = client->radio;
 	client->last_info.mode = -1;
 
@@ -780,7 +836,7 @@ struct rigctld_client *rigctld_client_create(struct ev_loop *loop, struct mh_con
 	if(client->enabled && mhc_is_online(ctl))
 		rigcl_start(client);
 
-	dbg0("%s rigctld client created (%s backend=%s host=%s port=%d connect_timeout_ms=%d io_timeout_ms=%d)",
+	info("%s rigctld client created (%s backend=%s host=%s port=%d connect_timeout_ms=%d io_timeout_ms=%d)",
 	     client->serial, radio_str(client->radio), client->backend, client->host, client->port,
 	     client->connect_timeout_ms, client->io_timeout_ms);
 
